@@ -1,0 +1,36 @@
+name: "Validate File"
+description: "Validate a file exists and is not empty"
+
+inputs:
+  file-path:
+    description: "Path of the file to validate"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Verify file exists
+      shell: bash
+      run: |
+        # Files to verify
+        files=(
+          "${{ inputs.file-path }}"
+        )
+        for file in "${files[@]}"; do
+          if [ ! -f "$file" ]; then
+            echo "Error: Missing file $file"
+            exit 1
+          fi
+        done
+
+    - name: Verify file isn't empty
+      shell: bash
+      run: |
+        if [ -f "${{ inputs.file-path }}" ]; then
+          file_size=$(stat -f%z "${{ inputs.file-path }}" 2>/dev/null || stat -c%s "${{ inputs.file-path }}")
+          echo "File size: $file_size bytes"
+          if [ "$file_size" -eq 0 ]; then
+            echo "Error: File is empty"
+            exit 1
+          fi
+        fi

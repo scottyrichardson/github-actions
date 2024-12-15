@@ -1,0 +1,29 @@
+name: "Validate HTML"
+description: "Validate the HTML of each file in a folder"
+
+inputs:
+  node-version:
+    description: "Node.js version to use"
+    required: true
+    default: "20.x"
+  source-path:
+    description: "Root folder containing HTML files to validate"
+    required: true
+
+outputs:
+  build-path:
+    description: "Path to the build output"
+    value: ${{ steps.build-path.outputs.build-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: "npm"
+
+    - name: Validate HTML
+      shell: bash
+      run: npx html-validate "${{ inputs.source-path }}/**/*.html"

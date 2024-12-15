@@ -1,0 +1,35 @@
+name: "AWS CloudFront Invalidation"
+description: "Create an AWS CloudFront invalidation"
+
+inputs:
+  aws-access-key-id:
+    description: "AWS Access Key ID"
+    required: true
+  aws-secret-access-key:
+    description: "AWS Secret Access Key"
+    required: true
+  aws-region:
+    description: "AWS Region"
+    required: true
+  cloudfront-distribution-id:
+    description: "CloudFront distribution ID"
+    required: true
+  cloudfront-invalidation-path:
+    description: "CloudFront invalidation path"
+    required: true
+    default: /*
+
+runs:
+  using: "composite"
+  steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Invalidate CloudFront path
+      shell: bash
+      run: |
+        aws cloudfront create-invalidation --distribution-id ${{ inputs.cloudfront-distribution-id }} --paths "${{ inputs.cloudfront-invalidation-path }}"
