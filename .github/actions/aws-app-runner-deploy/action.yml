@@ -1,0 +1,65 @@
+name: "AWS App Runner Deploy"
+description: "Deploy and wait for an AWS App Runner service update"
+
+inputs:
+  aws-access-key-id:
+    description: "AWS Access Key ID"
+    required: true
+  aws-secret-access-key:
+    description: "AWS Secret Access Key"
+    required: true
+  aws-region:
+    description: "AWS Region"
+    required: true
+  service-arn:
+    description: "App Runner Service ARN"
+    required: true
+  timeout-minutes:
+    description: "Maximum minutes to wait for deployment"
+    required: false
+    default: "30"
+  poll-interval:
+    description: "Seconds between status checks"
+    required: false
+    default: "10"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
+
+    - name: Deploy to App Runner
+      shell: bash
+      run: |
+        aws apprunner start-deployment \
+          --service-arn ${{ inputs.service-arn }} \
+          --region ${{ inputs.aws-region }}
+
+    - name: Wait for deployment
+      shell: bash
+      run: |
+        start_time=$SECONDS
+        timeout_seconds=$(( ${{ inputs.timeout-minutes }} * 60 ))
+
+        while true; do
+          elapsed_time=$(( SECONDS - start_time ))
+          if [ $elapsed_time -gt $timeout_seconds ]; then
+            echo "Deployment timed out after ${{ inputs.timeout-minutes }} minutes"
+            exit 1
+          fi
+          
+          STATUS=$(aws apprunner describe-service --service-arn ${{ inputs.service-arn }} --query 'Service.Status' --output text)
+          if [ "$STATUS" = "RUNNING" ]; then
+            break
+          elif [ "$STATUS" = "FAILED" ]; then
+            echo "Deployment failed"
+            exit 1
+          fi
+          echo "Waiting for deployment... Current status: $STATUS"
+          sleep ${{ inputs.poll-interval }}
+        done
